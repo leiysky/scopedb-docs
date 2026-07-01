@@ -1,0 +1,170 @@
+---
+title: Nested values
+---
+
+Use nested path access to read fields from objects and elements from arrays.
+
+Nested access returns semi-structured values. Cast a nested value when you need to compare it or return it as a specific type.
+
+## Syntax
+
+```scopeql
+<value>[<field_name>]
+<value>[<array_index>]
+<value>[<field_name>][<nested_field_name>]
+```
+
+`<field_name>` is a string key. `<array_index>` is a zero-based integer position.
+
+## Read an object field
+
+```scopeql
+CREATE TABLE events (
+    ts timestamp,
+    payload any
+);
+
+VALUES (
+    '2026-01-01T00:00:00Z'::timestamp,
+    {"gateway": 'stripe', "amount": 42.5, "status": 'paid'}
+)
+INSERT INTO events;
+```
+
+Read fields with bracket syntax:
+
+```scopeql
+FROM events
+SELECT
+    payload['gateway']::string AS gateway,
+    payload['amount']::float AS amount;
+```
+
+## Read nested object fields
+
+Chain bracket access to read deeper paths:
+
+```scopeql
+CREATE TABLE requests (
+    ts timestamp,
+    attrs any
+);
+
+VALUES (
+    '2026-01-01T00:00:00Z'::timestamp,
+    {
+        "http": {
+            "method": 'POST',
+            "status": 500
+        },
+        "service": 'checkout'
+    }
+)
+INSERT INTO requests;
+```
+
+```scopeql
+FROM requests
+SELECT
+    attrs['service']::string AS service,
+    attrs['http']['method']::string AS method,
+    attrs['http']['status']::int AS status;
+```
+
+## Read an array element
+
+Array positions are zero-based:
+
+```scopeql
+VALUES (['red', 'green', 'blue'])
+SELECT $0[0]::string AS first_color;
+```
+
+If an array contains objects, combine array and object access:
+
+<Callout type="note" title="Needs technical boundary review">
+
+This mixed array/object example should be checked for current path access and cast behavior. Do not infer index or pruning behavior from this example.
+
+</Callout>
+
+```scopeql
+VALUES ([{"name": 'sensor1', "value": 23.5}, {"name": 'sensor2', "value": 19.0}])
+SELECT $0[1]['name']::string AS second_sensor;
+```
+
+## Missing paths
+
+<Callout type="note" title="Needs technical boundary review">
+
+This section defines query semantics for missing paths and `NULL`. Review it against the current ScopeQL expression behavior before treating it as a public contract.
+
+</Callout>
+
+If an object does not contain the requested key, or an array index is outside the array, nested access returns `NULL`.
+
+```scopeql
+FROM events
+SELECT payload['missing_key'];
+```
+
+Use `IS NULL` or `IS NOT NULL` when you need to test for missing or null nested values.
+
+Missing and explicit `NULL` both appear as `NULL` at the selected path. If your application must distinguish them, preserve the raw payload and add an application-level field that records presence explicitly.
+
+## Filtering nested values
+
+Cast nested values before comparing them:
+
+```scopeql
+FROM events
+WHERE payload['status']::string = 'paid'
+SELECT ts;
+```
+
+The cast makes the comparison type explicit. It also helps keep query examples stable when the same path can contain different value types across rows.
+
+## Grouping nested values
+
+You can group by a cast nested value:
+
+```scopeql
+FROM events
+GROUP BY payload['status']::string AS status
+AGGREGATE count() AS rows;
+```
+
+## Selecting raw nested values
+
+If you do not cast a nested value, it remains semi-structured:
+
+```scopeql
+FROM events
+SELECT payload['amount'] AS raw_amount;
+```
+
+Cast when downstream code expects a concrete type:
+
+```scopeql
+FROM events
+SELECT payload['amount']::float AS amount;
+```
+
+## Indexing boundary
+
+A point index on an `object`, `any`, or nested-path expression can help eligible nested predicates use pruning or index acceleration.
+
+Do not treat nested access, casts, filters, and pruning as the same behavior. A path can be valid to query even when a specific predicate shape is not eligible for index acceleration.
+
+## Common mistakes
+
+- Do not compare nested values without a cast when your logic expects a specific type.
+- Do not assume all rows have the same path. Missing paths return `NULL`.
+- Do not assume a valid nested path is automatically optimized by an index.
+- Do not use nested payload fields as a substitute for stable typed columns when the field is central to most queries.
+
+## Related pages
+
+- [Object and any values](/reference/data-model/object-any-values)
+- [`[] (get)`](/reference/functions/semi-structured-data/get)
+- [CREATE INDEX](/reference/commands/statements/create-index)

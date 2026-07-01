@@ -1,0 +1,93 @@
+---
+title: Tables and typed columns
+---
+
+Use tables and typed columns for fields whose meaning and type are stable enough to query directly.
+
+A ScopeDB table defines named columns. Each column has a ScopeDB data type such as `timestamp`, `string`, `int`, `float`, `object`, or `any`.
+
+## Define stable columns
+
+Put fields in typed columns when most queries filter, group, join, or sort by them.
+
+```scopeql
+CREATE TABLE events (
+    ts timestamp,
+    account_id string,
+    event_type string,
+    payload any
+);
+```
+
+In this model:
+
+- `ts` is a typed timestamp for time filters and ordering.
+- `account_id` is a stable tenant or customer dimension.
+- `event_type` is a stable event classifier.
+- `payload` keeps fields that may vary by event type or application version.
+
+## Use typed columns with flexible payloads
+
+Typed columns and semi-structured payloads are meant to work together.
+
+Use typed columns for the fields that form your common access pattern:
+
+```scopeql
+FROM events
+WHERE account_id = 'acct_123'
+WHERE event_type = 'checkout'
+SELECT ts, payload['amount']::float AS amount;
+```
+
+Keep the full payload when you need to preserve fields that are sparse, nested, or still evolving.
+
+## Choose a column type
+
+Use the narrowest type that matches the field's stable meaning:
+
+| Field shape | Common type |
+| --- | --- |
+| event time | `timestamp` |
+| identifiers | `string` |
+| counters or whole-number values | `int` or `uint` |
+| measurements and amounts | `float` |
+| boolean flags | `boolean` |
+| object-shaped payloads | `object` |
+| changing or mixed-shape payloads | `any` |
+
+See [Data types reference](/reference/data-types) for the complete type list.
+
+## Add semi-structured columns intentionally
+
+Use `object` when the value should be object-shaped:
+
+```scopeql
+CREATE TABLE service_logs (
+    ts timestamp,
+    level string,
+    attrs object
+);
+```
+
+Use `any` when the value may contain different shapes across rows:
+
+```scopeql
+CREATE TABLE raw_events (
+    ts timestamp,
+    payload any
+);
+```
+
+## Common mistakes
+
+- Do not hide stable dimensions inside `payload` when most queries need them.
+- Do not make every column `any`; typed columns make query intent clearer.
+- Do not duplicate the same field in both a typed column and payload unless your ingest path intentionally preserves the raw event.
+- Do not assume a nested payload field has the same type in every row. Cast it when you use it as a typed value.
+
+## Related pages
+
+- [CREATE TABLE](/reference/commands/statements/create-table)
+- [Object and any values](/reference/data-model/object-any-values)
+- [Nested values](/reference/data-model/nested-values)
+- [Data types reference](/reference/data-types)

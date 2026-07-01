@@ -1,11 +1,17 @@
 ---
 title: Semi-structured data type
 relatedContents:
+    - title: Object and any values
+      url: /reference/data-model/object-any-values
+    - title: Nested values
+      url: /reference/data-model/nested-values
     - title: Semi-structured data functions
       url: /reference/functions/semi-structured-data
 ---
 
-The semi-structured data type can contain a value of any other data type.
+ScopeDB supports semi-structured values through `array`, `object`, and `any`.
+
+Use this page for semi-structured literal and value behavior. Use [Object and any values](/reference/data-model/object-any-values) and [Nested values](/reference/data-model/nested-values) for data-model guidance.
 
 ## Inserting semi-structured data
 
@@ -96,7 +102,7 @@ ORDER BY n;
 +---+------------------------------+-----------+
 ```
 
-You can extract a field from an object, or an element from an array, using the `[]` operator. For example:
+You can extract a field from an object, or an element from an array, using the `[]` operator. Missing object keys and out-of-range array indexes return `NULL`. For example:
 
 ```scopeql
 FROM vartab

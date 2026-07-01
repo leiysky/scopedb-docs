@@ -2,7 +2,9 @@
 title: CREATE INDEX
 ---
 
-Creates a new index on a table to improve query performance.
+Creates an index on a table expression.
+
+Indexes help ScopeDB prune or accelerate eligible reads. They are not uniqueness constraints, global secondary indexes, or row lookup indexes.
 
 ## Syntax
 
@@ -18,11 +20,11 @@ CREATE <index_type> INDEX [ IF NOT EXISTS ] [ <name> ] ON <table_name> (<index_e
 
 The type of index to create:
 
-* `POINT`: An index that optimizes performance of predicate forms based on `=`, `IS` and `contains(...)`. On `object` and `any` expressions, a point index can also prune predicates on nested paths inside the value.
-* `RANGE`: An index that optimizes performance of range queries on the indexed expression
-* `PATTERN`: An index that optimizes supported string pattern predicates
-* `SEARCH`: An index that optimizes text search operations using the `search` function
-* `MATERIALIZED`: An index that stores the results of an expression for faster access, useful for complex expressions or semi-structured data path access
+* `POINT`: supports pruning or acceleration for eligible point-style predicates on the indexed expression. On `object` and `any` expressions, a point index can also support eligible predicates on nested paths inside the value.
+* `RANGE`: supports eligible range predicates on the indexed expression.
+* `PATTERN`: supports eligible string pattern predicates.
+* `SEARCH`: supports eligible text search predicates using the `search` function.
+* `MATERIALIZED`: stores the result of an expression so ScopeDB can reuse it during eligible reads.
 
 ### `<name>`
 
@@ -76,24 +78,27 @@ CREATE MATERIALIZED INDEX ON logs (var['host']::string);
 
 ## When to Use Each Index Type
 
-1. Use `POINT` or `RANGE` indexes when:
-   - You frequently filter on specific columns or expressions.
-   - You need to optimize queries that use range conditions or equality comparisons.
-   - You filter on nested paths inside an `object` or `any` column.
+1. Use `POINT` indexes when:
+   - Queries frequently filter on exact values for a column or expression.
+   - Queries need to filter nested paths inside an `object` or `any` expression.
+   - You want pruning or index acceleration for eligible point-style predicates.
 
-2. Use `PATTERN` indexes when:
+2. Use `RANGE` indexes when:
+   - Queries frequently filter a column or expression with range predicates.
+
+3. Use `PATTERN` indexes when:
    - You need to optimize supported string predicates such as `contains`, `starts_with`, `ends_with`, or compatible `regexp_like` forms.
 
-3. Use `SEARCH` indexes when:
+4. Use `SEARCH` indexes when:
    - You need to perform text search operations using the `search` function.
-   - You want to optimize queries that look for specific text patterns in string columns.
 
-4. Use `MATERIALIZED` indexes when:
+5. Use `MATERIALIZED` indexes when:
    - You have complex expressions or semi-structured data paths that are expensive to compute.
-   - You want to pre-compute and store results for faster access.
+   - You want ScopeDB to store expression results for eligible reads.
 
 ## Notes
 
-- Indexes improve query performance but require additional storage space.
-- Creating too many indexes can slow down write operations, and may increase query latency.
-- The query optimizer automatically determines when to use available indexes.
+- Indexes add storage and maintenance work.
+- Eligibility depends on the indexed expression, predicate shape, and data layout.
+- Do not assume every predicate on a nested value receives the same pruning or acceleration behavior.
+- Put index design guidance in performance optimization docs. Keep this page focused on `CREATE INDEX` syntax and public behavior boundaries.

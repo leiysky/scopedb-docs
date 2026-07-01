@@ -1,8 +1,12 @@
 ---
-title: Query syntax
+title: ScopeQL query syntax
 ---
 
-ScopeDB supports querying using a pipelined relational query language (ScopeQL) in the following basic syntax:
+ScopeQL queries are written in pipeline order: start with data, then filter, transform, aggregate, order, and limit the result.
+
+ScopeQL uses relational query concepts, but it is not a PostgreSQL or MySQL dialect. Use this page to check ScopeDB's query clause order and supported clause shapes.
+
+## Clause order
 
 ```
 [ FROM ... [ SAMPLE ... PERCENT ] | VALUES ... ]
@@ -13,6 +17,23 @@ ScopeDB supports querying using a pipelined relational query language (ScopeQL) 
 [ [ GROUP BY ... ] [ WITHIN GROUP ORDER BY ... ] AGGREGATE ... ]
 [ ORDER BY ... ]
 [ LIMIT ... ]
+```
+
+Common patterns:
+
+```scopeql
+FROM events
+WHERE event_type = 'checkout'
+SELECT ts, user_id, payload['amount']::float AS amount
+ORDER BY ts DESC
+LIMIT 20;
+```
+
+```scopeql
+VALUES
+    ('checkout', 42.50),
+    ('signup', NULL)
+SELECT $0 AS event_type, $1 AS amount;
 ```
 
 ## SELECT
