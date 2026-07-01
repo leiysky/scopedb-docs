@@ -35,6 +35,15 @@ export const developerSidebar: SidebarItem[] = [
 
 export const referenceSidebar: SidebarItem[] = [
     { label: "Overview", link: "/reference" },
+    { label: "How to use this reference", link: "/reference/how-to-use-this-reference" },
+    {
+        label: "Data model", items: [
+            { label: "Overview", link: "/reference/data-model" },
+            { label: "Tables and typed columns", link: "/reference/data-model/tables-and-typed-columns" },
+            { label: "Object and any values", link: "/reference/data-model/object-any-values" },
+            { label: "Nested values", link: "/reference/data-model/nested-values" },
+        ],
+    },
     {
         label: "Data types", items: [
             { label: "Overview", link: "/reference/data-types" },

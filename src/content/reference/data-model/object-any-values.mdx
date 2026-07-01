@@ -1,0 +1,138 @@
+---
+title: Object and any values
+---
+
+Use `object` and `any` when rows contain semi-structured values or fields that can change shape over time.
+
+Use typed columns for fields with stable meaning and type. Use `object` or `any` for fields that are nested, sparse, versioned, or different across event types.
+
+## `object`
+
+An `object` value stores key-value pairs. Use it when the column should contain object-shaped semi-structured data.
+
+```scopeql
+CREATE TABLE events (
+    ts timestamp,
+    event_type string,
+    attrs object
+);
+```
+
+Insert an object value:
+
+```scopeql
+VALUES (
+    '2026-01-01T00:00:00Z'::timestamp,
+    'checkout',
+    {"gateway": 'stripe', "amount": 42.5}
+)
+INSERT INTO events;
+```
+
+Use `object` when each row should contain a JSON-object-like value:
+
+```scopeql
+FROM events
+SELECT attrs['gateway']::string AS gateway;
+```
+
+## `any`
+
+An `any` value can contain values with different ScopeDB types. Use it when the column may receive strings, numbers, arrays, objects, booleans, or null values across rows.
+
+```scopeql
+CREATE TABLE raw_events (
+    ts timestamp,
+    payload any
+);
+```
+
+Parse JSON text into an `any` value:
+
+```scopeql
+VALUES (
+    '2026-01-01T00:00:00Z'::timestamp,
+    parse_json('{"gateway":"stripe","amount":42.5}')
+)
+INSERT INTO raw_events;
+```
+
+Use `any` when the same column may contain different value shapes:
+
+```scopeql
+CREATE TABLE mixed_payloads (
+    source string,
+    payload any
+);
+
+VALUES
+    ('app', {"event_type": 'checkout', "amount": 42.5}),
+    ('sensor', [22.1, 22.4, 22.8]),
+    ('note', 'manual override')
+INSERT INTO mixed_payloads;
+```
+
+## Choose `object` or `any`
+
+Use `object` when the column should contain object-shaped values.
+
+Use `any` when the column needs to preserve changing value types across rows.
+
+Use typed columns when the field is stable enough to deserve a first-class column. For example, keep `ts`, `account_id`, or `event_type` as typed columns when most queries filter or group by them:
+
+```scopeql
+CREATE TABLE app_events (
+    ts timestamp,
+    account_id string,
+    event_type string,
+    payload any
+);
+```
+
+Both types can be queried with nested path access. Cast nested values before comparing them as a specific type:
+
+```scopeql
+FROM raw_events
+WHERE payload['gateway']::string = 'stripe'
+SELECT ts, payload['amount']::float AS amount;
+```
+
+## Preserve raw data and project typed values
+
+You can keep raw payloads and project typed values at query time:
+
+```scopeql
+FROM app_events
+WHERE event_type = 'checkout'
+SELECT
+    ts,
+    account_id,
+    payload['amount']::float AS amount,
+    payload['currency']::string AS currency;
+```
+
+This keeps the table flexible while still making query results typed where needed.
+
+## Object and any comparison
+
+Semi-structured values can be selected, filtered, and ordered. When you compare `any` values of different underlying types, ScopeDB uses its semi-structured type ordering. See [Semi-structured data type](/reference/data-types/semi-structured) for the current ordering.
+
+For stable application logic, prefer casting a nested value to the expected type before comparing it.
+
+## Indexing boundary
+
+Point indexes can be created on `object` and `any` expressions, and eligible nested-path predicates can use indexed information inside the value.
+
+This is a pruning or acceleration capability for eligible reads. It is not a guarantee that every path, cast, or predicate form receives the same optimization.
+
+## Common mistakes
+
+- Do not put every field into `any` when a field is stable and frequently queried. Use a typed column for stable routing, filtering, and grouping fields.
+- Do not assume a field has the same type in every row just because the path name is the same. Cast before typed comparisons.
+- Do not treat `object` and `any` indexing as a guarantee that every nested predicate is accelerated.
+
+## Related pages
+
+- [Nested values](/reference/data-model/nested-values)
+- [Semi-structured data type](/reference/data-types/semi-structured)
+- [CREATE INDEX](/reference/commands/statements/create-index)

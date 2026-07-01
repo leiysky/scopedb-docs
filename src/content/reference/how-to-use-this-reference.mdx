@@ -1,0 +1,64 @@
+---
+title: How to use this reference
+---
+
+Use this reference when you need exact ScopeDB behavior: syntax, supported clauses, data types, request and response shapes, function signatures, and edge cases.
+
+For a step-by-step workflow, use a guide first. Reference pages assume you already know the task and want to check the contract.
+
+## Read ScopeQL syntax
+
+Syntax blocks use placeholders inside angle brackets:
+
+```scopeql
+CREATE TABLE <table_name> (
+    <column_name> <data_type>
+)
+```
+
+Replace placeholders such as `<table_name>` with your own value.
+
+Optional syntax uses square brackets:
+
+```scopeql
+CREATE TABLE [ IF NOT EXISTS ] <table_name> (...)
+```
+
+Repeated syntax uses commas or ellipses:
+
+```scopeql
+GROUP BY <expr> [, ...]
+```
+
+## Follow ScopeQL clause order
+
+ScopeQL uses a pipelined order. A query usually starts from a source and then applies clauses in data-flow order:
+
+```scopeql
+FROM events
+WHERE event_type = 'checkout'
+SELECT ts, user_id, payload['amount']::float AS amount
+ORDER BY ts DESC
+LIMIT 20;
+```
+
+This is different from traditional SQL's written order. ScopeQL is SQL-compatible in its relational concepts and many expressions, but this reference does not imply PostgreSQL or MySQL dialect compatibility.
+
+## Treat examples as minimal contracts
+
+Examples use small tables such as `events`, `logs`, or `users`. They are written to show syntax and behavior, not production schema design.
+
+When a page says a feature can improve pruning or query acceleration, treat that as an index or execution capability, not as a performance guarantee for every predicate or workload.
+
+## Use guides for workflows
+
+Reference pages stay factual. Use these guides when you want a task path:
+
+- [Ingest events](/guides/ingest-events)
+- [Query events](/guides/query-events)
+- [Model flexible events](/guides/model-flexible-events)
+- [Add indexes](/guides/add-indexes)
+
+## Public boundaries
+
+ScopeDB may support internal or operator-facing statements that are not documented as public user contracts. Public reference pages describe the supported external behavior for application developers using ScopeDB Service, the HTTP API, SDKs, CLI, and ScopeQL.

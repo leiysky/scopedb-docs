@@ -1,0 +1,101 @@
+---
+title: Data model reference
+---
+
+Use the data model reference to decide how a row should represent stable fields, changing fields, and raw semi-structured payloads.
+
+ScopeDB tables combine typed columns with semi-structured values. A common pattern is to keep stable routing and query fields as typed columns, while preserving the original event or payload in an `object` or `any` column.
+
+```scopeql
+CREATE TABLE events (
+    ts timestamp,
+    account_id string,
+    event_type string,
+    payload any
+);
+```
+
+In this shape:
+
+- `ts`, `account_id`, and `event_type` are stable typed columns.
+- `payload` keeps fields whose shape may change across event types or application versions.
+
+## Core pages
+
+### [Tables and typed columns](/reference/data-model/tables-and-typed-columns)
+
+Tables contain typed columns. Use [`CREATE TABLE`](/reference/commands/statements/create-table) for table syntax and table-level options.
+
+### [Object and any values](/reference/data-model/object-any-values)
+
+Use `object` and `any` when data can contain semi-structured values or fields whose shape changes over time.
+
+### [Nested values](/reference/data-model/nested-values)
+
+Use nested path access to read fields from objects and elements from arrays.
+
+## Modeling patterns
+
+### Stable columns plus raw payload
+
+Use this pattern when you know the fields that most queries filter on, but the rest of the payload changes often.
+
+```scopeql
+CREATE TABLE events (
+    ts timestamp,
+    account_id string,
+    event_type string,
+    payload any
+);
+```
+
+Queries can filter stable columns and still inspect fields inside the payload:
+
+```scopeql
+FROM events
+WHERE account_id = 'acct_123'
+SELECT ts, event_type, payload['status']::string AS status;
+```
+
+### Mostly typed rows
+
+Use this pattern when the row shape is stable and each column has a known type.
+
+```scopeql
+CREATE TABLE invoices (
+    ts timestamp,
+    invoice_id string,
+    customer_id string,
+    amount float,
+    currency string
+);
+```
+
+### Flexible payload-first rows
+
+Use this pattern when data arrives before the full schema has stabilized.
+
+```scopeql
+CREATE TABLE raw_events (
+    ts timestamp,
+    payload any
+);
+```
+
+You can still query nested fields and cast values when you need typed comparisons:
+
+```scopeql
+FROM raw_events
+WHERE payload['event_type']::string = 'checkout'
+SELECT ts, payload['amount']::float AS amount;
+```
+
+## Null and missing values
+
+Missing-path and null behavior is part of the semi-structured value contract. Use [Nested values](/reference/data-model/nested-values) for the current reference behavior.
+
+## Related pages
+
+- [Data types reference](/reference/data-types)
+- [Semi-structured data type](/reference/data-types/semi-structured)
+- [CREATE TABLE](/reference/commands/statements/create-table)
