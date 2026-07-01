@@ -121,9 +121,9 @@ For stable application logic, prefer casting a nested value to the expected type
 
 ## Indexing boundary
 
-Point indexes can be created on `object` and `any` expressions, and eligible nested-path predicates can use indexed information inside the value.
+Point indexes can be created on `object` and `any` expressions, and eligible point-style predicates over nested scalar values can use indexed information inside the value.
 
-This is a pruning or acceleration capability for eligible reads. It is not a guarantee that every path, cast, or predicate form receives the same optimization.
+This is a pruning or acceleration capability for eligible reads. It does not prove `NULL` or missing-path checks, and it is not a guarantee that every path, cast, or predicate form receives the same optimization.
 
 ## Common mistakes
 

@@ -14,7 +14,7 @@ Nested access returns semi-structured values. Cast a nested value when you need 
 <value>[<field_name>][<nested_field_name>]
 ```
 
-`<field_name>` is a string key. `<array_index>` is a zero-based integer position.
+`<field_name>` is a string key. `<array_index>` is a zero-based integer position. Negative array indexes count from the end of the array, so `-1` reads the last element.
 
 ## Read an object field
 
@@ -73,18 +73,23 @@ SELECT
 
 ## Read an array element
 
-Array positions are zero-based:
+Array positions are zero-based. Negative indexes count from the end of the array:
 
 ```scopeql
 VALUES (['red', 'green', 'blue'])
 SELECT $0[0]::string AS first_color;
 ```
 
+```scopeql
+VALUES (['red', 'green', 'blue'])
+SELECT $0[-1]::string AS last_color;
+```
+
 If an array contains objects, combine array and object access:
 
-<Callout type="note" title="Needs technical boundary review">
+<Callout type="note" title="Access syntax only">
 
-This mixed array/object example should be checked for current path access and cast behavior. Do not infer index or pruning behavior from this example.
+This mixed array/object example shows access semantics. It does not describe index or pruning behavior.
 
 </Callout>
 
@@ -95,13 +100,13 @@ SELECT $0[1]['name']::string AS second_sensor;
 
 ## Missing paths
 
-<Callout type="note" title="Needs technical boundary review">
+Nested access returns `NULL` when the requested path cannot produce a value. This includes:
 
-This section defines query semantics for missing paths and `NULL`. Review it against the current ScopeQL expression behavior before treating it as a public contract.
-
-</Callout>
-
-If an object does not contain the requested key, or an array index is outside the array, nested access returns `NULL`.
+- a previous path step is `NULL`;
+- an object does not contain the requested key;
+- an array index is outside the array;
+- the current value is not an object when accessed by string key;
+- the current value is not an array when accessed by integer index.
 
 ```scopeql
 FROM events
@@ -110,7 +115,7 @@ SELECT payload['missing_key'];
 
 Use `IS NULL` or `IS NOT NULL` when you need to test for missing or null nested values.
 
-Missing and explicit `NULL` both appear as `NULL` at the selected path. If your application must distinguish them, preserve the raw payload and add an application-level field that records presence explicitly.
+Explicit `NULL`, missing keys, out-of-range indexes, and non-applicable path steps all appear as `NULL` at the selected path. If your application must distinguish them, preserve the raw payload and add an application-level field that records presence explicitly.
 
 ## Filtering nested values
 
@@ -152,7 +157,7 @@ SELECT payload['amount']::float AS amount;
 
 ## Indexing boundary
 
-A point index on an `object`, `any`, or nested-path expression can help eligible nested predicates use pruning or index acceleration.
+A point index on an `object`, `any`, or nested-path expression can help eligible point-style predicates over nested scalar values or indexed expression values use pruning or index acceleration.
 
 Do not treat nested access, casts, filters, and pruning as the same behavior. A path can be valid to query even when a specific predicate shape is not eligible for index acceleration.
 

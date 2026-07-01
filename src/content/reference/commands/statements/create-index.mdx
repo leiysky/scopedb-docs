@@ -20,7 +20,7 @@ CREATE <index_type> INDEX [ IF NOT EXISTS ] [ <name> ] ON <table_name> (<index_e
 
 The type of index to create:
 
-* `POINT`: supports pruning or acceleration for eligible point-style predicates on the indexed expression. On `object` and `any` expressions, a point index can also support eligible predicates on nested paths inside the value.
+* `POINT`: supports pruning or acceleration for eligible point-style predicates on the indexed expression. On `object` and `any` expressions, a point index can also support eligible point-style predicates over nested scalar values inside the value.
 * `RANGE`: supports eligible range predicates on the indexed expression.
 * `PATTERN`: supports eligible string pattern predicates.
 * `SEARCH`: supports eligible text search predicates using the `search` function.
@@ -57,7 +57,7 @@ CREATE TABLE logs (
 -- POINT index on a column
 CREATE POINT INDEX ON logs (id);
 
--- POINT index on an object column and its nested paths
+-- POINT index on an object column and eligible nested scalar values
 CREATE POINT INDEX ON logs (var);
 
 -- POINT index on a timestamp expression
@@ -80,7 +80,7 @@ CREATE MATERIALIZED INDEX ON logs (var['host']::string);
 
 1. Use `POINT` indexes when:
    - Queries frequently filter on exact values for a column or expression.
-   - Queries need to filter nested paths inside an `object` or `any` expression.
+   - Queries compare nested scalar values inside an `object` or `any` expression with eligible point-style predicates.
    - You want pruning or index acceleration for eligible point-style predicates.
 
 2. Use `RANGE` indexes when:
@@ -100,5 +100,6 @@ CREATE MATERIALIZED INDEX ON logs (var['host']::string);
 
 - Indexes add storage and maintenance work.
 - Eligibility depends on the indexed expression, predicate shape, and data layout.
+- Point indexes on `object` and `any` values do not prove `NULL` or missing-path checks.
 - Do not assume every predicate on a nested value receives the same pruning or acceleration behavior.
 - Put index design guidance in performance optimization docs. Keep this page focused on `CREATE INDEX` syntax and public behavior boundaries.
